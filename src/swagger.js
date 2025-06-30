@@ -16,6 +16,10 @@ const options = {
             {
                 url: 'http://localhost:3333',
                 description: 'Development server'
+            },
+            {
+                url:'https://luri-precios-backend-latest.onrender.com/',
+                description: 'Production server'
             }
         ],
         components: {
