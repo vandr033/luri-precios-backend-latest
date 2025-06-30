@@ -127,7 +127,7 @@ async function recolectarPrecios(req, res){
                 categoriasConError,
                 totalProductos
             },
-             data: productos,
+            //  data: productos,
             timestamp: new Date().toISOString()
         });
         
