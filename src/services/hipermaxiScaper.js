@@ -144,8 +144,9 @@ async function recolectarPrecios(req, res){
 //obtener categorias y subcategorias de la sucursal
 async function obtenerCategoriasYSubCategoriasSucursal(){
     try{
-        const response = await axios.get(`${baseUrl}/markets/clasificaciones?IdMarket=${idMarket}&IdSucursal=${idSucursal}`);
+        const response = await axios.get(`${baseUrl}markets/clasificaciones?IdMarket=${idMarket}&IdSucursal=${idSucursal}`);
         const mensaje = response.data;
+        
         if(mensaje.ConError == true){
             return [];
         }
@@ -282,7 +283,7 @@ async function obtenerPreciosPorCategoria(categoriaId, descripcionCategoria){
     try{
         const timeStart = new Date();
         let precios = [];
-        const response = await axios.get(`${baseUrl}/public/productos?IdMarket=${idMarket}&IdLocatario=${idSucursal}&IdCategoria=${categoriaId}&Pagina=1&Cantidad=${cantidadProductos}`);
+        const response = await axios.get(`${baseUrl}public/productos?IdMarket=${idMarket}&IdLocatario=${idSucursal}&IdCategoria=${categoriaId}&Pagina=1&Cantidad=${cantidadProductos}`);
         mensaje = response.data;
         Dato = mensaje.Dato;
         if(mensaje.ConError == true){
@@ -311,7 +312,7 @@ async function obtenerPreciosPorCategoria(categoriaId, descripcionCategoria){
 async function obtenerPreciosPorSubCategoria(subCategoriaId, categoriaId, descripcionCategoria){
     const timeStart = new Date();
     let precios = [];
-    const response = await axios.get(`${baseUrl}/public/productos?IdMarket=${idMarket}&IdLocatario=${idSucursal}&IdCategoria=${categoriaId}&IdsSubcategoria[0]=${subCategoriaId}&Pagina=1&Cantidad=${cantidadProductos}`);
+    const response = await axios.get(`${baseUrl}public/productos?IdMarket=${idMarket}&IdLocatario=${idSucursal}&IdCategoria=${categoriaId}&IdsSubcategoria[0]=${subCategoriaId}&Pagina=1&Cantidad=${cantidadProductos}`);
     mensaje = response.data;
     Dato = mensaje.Dato;
     if(mensaje.ConError == true){
