@@ -74,12 +74,8 @@ async function recolectarPrecios(req, res){
                 
             } catch (error) {
                 console.error(`Error recolectando precios para categoría ${categoria.descripcion}:`, error.message);
-                resultadosRecoleccion.push({
-                    categoriaId: categoria.idCategoria,
-                    categoriaNombre: categoria.descripcion,
-                    error: error.message,
-                    timestamp: new Date().toISOString()
-                });
+                // Don't push error objects, just log the error
+                console.error(`❌ Skipping category ${categoria.descripcion} due to error`);
             }
             } else {
                 for (const subCategoria of categoria.subCategorias) {
@@ -92,12 +88,8 @@ async function recolectarPrecios(req, res){
                         resultadosRecoleccion.push(precios);
                     } catch (error) {
                         console.error(`Error recolectando precios para subcategoría ${subCategoria.descripcion}:`, error.message);
-                        resultadosRecoleccion.push({
-                            categoriaId: categoria.idCategoria,
-                            categoriaNombre: categoria.descripcion,
-                            error: error.message,
-                            timestamp: new Date().toISOString()
-                        });
+                        // Don't push error objects, just log the error
+                        console.error(`❌ Skipping subcategory ${subCategoria.descripcion} due to error`);
                     }
                 }
             }
@@ -105,7 +97,7 @@ async function recolectarPrecios(req, res){
         
         const totalCategorias = categorias.length;
         const totalProductos = resultadosRecoleccion.reduce((acc, curr) => acc + curr.length, 0);
-        const categoriasExitosas = resultadosRecoleccion.filter(r => !r.error).length;
+        const categoriasExitosas = resultadosRecoleccion.length; // All remaining items are successful
         const categoriasConError = totalCategorias - categoriasExitosas;
         const timeEnd = new Date();
         const timeDiff = timeEnd - timeStart;
@@ -113,6 +105,19 @@ async function recolectarPrecios(req, res){
         
         //resultadosRecoleccion is an array of arrays, each array contains the products of a category, we need to flatten it
         const productos = resultadosRecoleccion.flat();
+        
+        // Debug: Log the structure of productos before upload
+        console.log(`📦 Total products to upload: ${productos.length}`);
+        if (productos.length > 0) {
+            console.log('📋 Sample product structure:', productos[0]);
+            console.log('🔍 Checking for missing IdSubCategoria...');
+            const productsWithoutSubCategory = productos.filter(p => p.IdSubCategoria === undefined);
+            if (productsWithoutSubCategory.length > 0) {
+                console.log(`⚠️ Found ${productsWithoutSubCategory.length} products without IdSubCategoria`);
+                console.log('Sample product without IdSubCategoria:', productsWithoutSubCategory[0]);
+            }
+        }
+        
         //upload products to database
         const resultUpload = await uploadProducts(productos);
         if(resultUpload == -1){
@@ -294,11 +299,12 @@ async function obtenerPreciosPorCategoria(categoriaId, descripcionCategoria){
                 IdProducto: producto.IdProducto,
                 Descripcion: producto.Descripcion,
                 ConOferta: producto.ConOferta,
-                PrecioOriginal: producto.ConOferta ? producto.PrecioOferta : producto.PrecioVenta,
-                Precio: producto.ConOferta ? producto.PrecioOriginal : null,
+                Precio: producto.ConOferta ? producto.PrecioOferta : null,
+                PrecioOriginal: producto.ConOferta ? producto.PrecioOriginal : producto.PrecioVenta,
                 Moneda: producto.Moneda,
                 IdCategoria: categoriaId,
-                DescripcionCategoria: descripcionCategoria
+                DescripcionCategoria: descripcionCategoria,
+                IdSubCategoria: 0 // Default value for category-level products
             })
         })
         return precios;
@@ -323,8 +329,8 @@ async function obtenerPreciosPorSubCategoria(subCategoriaId, categoriaId, descri
             IdProducto: producto.IdProducto,
             Descripcion: producto.Descripcion,
             ConOferta: producto.ConOferta,
-            PrecioOriginal: producto.ConOferta ? producto.PrecioOferta : producto.PrecioVenta,
-            Precio: producto.ConOferta ? producto.PrecioOriginal : null,
+            Precio: producto.ConOferta ? producto.PrecioOferta : null,
+            PrecioOriginal: producto.ConOferta ? producto.PrecioOriginal : producto.PrecioVenta,
             Moneda: producto.Moneda,
             IdCategoria: categoriaId,
             DescripcionCategoria: descripcionCategoria,

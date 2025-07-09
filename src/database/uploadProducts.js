@@ -16,7 +16,7 @@ async function uploadProducts(products) {
         table.columns.add('IdProducto', sql.NVarChar(20), { nullable: false });
         table.columns.add('Descripcion', sql.NVarChar(255), { nullable: false });
         table.columns.add('ConOferta', sql.Bit, { nullable: false });
-        table.columns.add('Precio', sql.Decimal(10, 2), { nullable: false });
+        table.columns.add('Precio', sql.Decimal(10, 2), { nullable: true });
         table.columns.add('PrecioOriginal', sql.Decimal(10, 2), { nullable: true });
         table.columns.add('Moneda', sql.NVarChar(10), { nullable: false });
         table.columns.add('IdCategoria', sql.Int, { nullable: false });
@@ -37,10 +37,26 @@ async function uploadProducts(products) {
         // Filter out items with null IdProducto
         const validProducts = products.filter(item => item.IdProducto);
         console.log(`📊 Processing ${validProducts.length} valid products out of ${products.length} total`);
+        
+        // Check if we have any valid products to insert
+        if (validProducts.length === 0) {
+            console.log('⚠️ No valid products to insert after filtering');
+            await closeConnection();
+            return 0;
+        }
 
         // Add rows to the table
-        validProducts.forEach(item => {
-            console.log(item);
+        validProducts.forEach((item, index) => {
+            // console.log(`Processing product ${index + 1}:`, item);
+            
+            // Validate required fields
+            if (!item.IdProducto || !item.Descripcion || item.ConOferta === undefined || 
+                item.Precio === undefined || !item.Moneda || !item.IdCategoria || 
+                !item.DescripcionCategoria) {
+                console.error(`❌ Invalid product data at index ${index}:`, item);
+                return; // Skip this item
+            }
+            
             table.rows.add(
                 item.IdProducto,
                 item.Descripcion,
@@ -57,14 +73,25 @@ async function uploadProducts(products) {
 
         // Perform the bulk insert
         const request = pool.request();
-        await request.bulk(table);
-        
-        console.log(`✅ Successfully uploaded ${products.length} products to database`);
+        try {
+            await request.bulk(table);
+            console.log(`✅ Successfully uploaded ${validProducts.length} products to database`);
+        } catch (bulkError) {
+            console.error('❌ Bulk insert error:', bulkError);
+            console.error('❌ Error details:', {
+                message: bulkError.message,
+                code: bulkError.code,
+                state: bulkError.state,
+                class: bulkError.class,
+                lineNumber: bulkError.lineNumber
+            });
+            throw bulkError;
+        }
         
         // Close the connection after successful insert
         await closeConnection();
         
-        return products.length;
+        return validProducts.length;
 
     } catch (error) {
         console.error('Error uploading products:', error);
